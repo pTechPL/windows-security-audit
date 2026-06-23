@@ -1,4 +1,3 @@
-# windows-security-audit
 # Windows Security Audit Script
 
 **Version:** 1.0  
