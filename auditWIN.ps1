@@ -1,12 +1,9 @@
 # ========================================
 # Windows Security / Hardening Report
-# Author: Bartlomiej
-# Version: 2.0
-# Developed with assistance from AI tools
-# and public security documentation.
+# Author: Bartlomiej Pogwizd
+# Version: 1.1
 # ========================================
 
-#Requires -Version 5.1
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "SilentlyContinue"
@@ -16,7 +13,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # ============================================================
 
 $AUTHOR  = "Author: Bartlomiej Pogwizd / youtube.com/@pTech-pl"
-$VERSION = "Version: 2.0"
+$VERSION = "Version: 1.1"
 $TITLE   = "Windows Security / Audit Report"
 $LINE    = "========================================"
 $DASH    = "----------------------------------------"
@@ -29,6 +26,74 @@ $script:FIX_REGISTRY = [System.Collections.Generic.List[hashtable]]::new()
 
 $DATA_FILE = [System.IO.Path]::Combine($env:TEMP, "win_audit_$([System.IO.Path]::GetRandomFileName()).tsv")
 "label`tstatus`tdetail" | Out-File -FilePath $DATA_FILE -Encoding UTF8
+
+# ============================================================
+# CIS BENCHMARK MAPPING (Windows 11 Enterprise v5.0.0)
+# ============================================================
+$CIS_MAP = @{
+    "Windows Defender (AV)"          = "18.1.1"
+    "Real-Time Protection"           = "18.1.2"
+    "Tamper Protection"              = "18.1.4"
+    "AV Signatures"                  = "18.1.3"
+    "SmartScreen (Apps)"             = "18.8.1"
+    "Firewall (Domain)"              = "9.1.1"
+    "Firewall (Private)"             = "9.1.1"
+    "Firewall (Public)"              = "9.1.1"
+    "Windows Update Service"         = "3.1.1"
+    "Last Windows Update"            = "3.1.2"
+    "Secure Boot"                    = "2.3.7.1"
+    "BitLocker (C:)"                 = "2.3.8.1"
+    "TPM"                            = "2.3.7.2"
+    "UAC"                            = "2.3.5.1"
+    "ASLR (System)"                  = "2.3.6.2"
+    "DEP (System)"                   = "2.3.6.1"
+    "Credential Guard"               = "2.3.7.3"
+    "AppLocker / WDAC"               = "2.3.9.1"
+    "Telemetry"                      = "2.3.1.1"
+    "Advertising ID"                 = "2.3.1.2"
+    "Activity History"               = "2.3.2.1"
+    "Cortana"                        = "2.3.3.1"
+    "Location Tracking"              = "2.3.4.1"
+    "Feedback Frequency"             = "2.3.1.4"
+    "Remote Desktop (RDP)"           = "2.2.2.1"
+    "RDP NLA"                        = "2.2.2.2"
+    "WinRM (Remote Management)"      = "2.2.3.1"
+    "Remote Registry"                = "2.2.4.1"
+    "File & Printer Sharing (SMB)"   = "2.2.5.1"
+    "SMB1 Protocol"                  = "2.2.5.2"
+    "Custom SMB Shares"              = "2.2.5.3"
+    "Telnet"                         = "2.2.6.1"
+    "Simple TCP/IP Services"         = "2.2.7.1"
+    "SNMP Service"                   = "2.2.8.1"
+    "TFTP Client"                    = "2.2.9.1"
+    "FTP Server (IIS)"               = "2.2.10.1"
+    "IIS Admin Service"              = "2.2.10.2"
+    "World Wide Web Publishing"      = "2.2.10.3"
+    "Remote Access Auto-Connection"  = "2.2.11.1"
+    "Xbox Accessory Management"      = "2.2.12.1"
+    "Xbox Live Game Save"            = "2.2.12.2"
+    "Xbox Live Networking"           = "2.2.12.3"
+    "Windows Media Player Sharing"   = "2.2.13.1"
+    "Print Spooler"                  = "2.2.14.1"
+    "DNS over HTTPS (DoH)"           = "2.3.10.1"
+    "Guest Account"                  = "2.3.4.2"
+    "Built-in Administrator"         = "2.3.4.3"
+    "Empty Password Accounts"        = "2.3.4.4"
+    "Max Password Age"               = "1.1.1"
+    "Min Password Length"            = "1.1.2"
+    "Account Lockout"                = "1.1.3"
+    "Audit: Logon Events"            = "6.2.1"
+    "Audit: Privilege Use"           = "6.2.2"
+    "Registry Startup Items"         = "17.1.1"
+    "Startup Folder"                 = "17.1.2"
+    "Scheduled Tasks"                = "17.1.3"
+    "OpenSSH Server (sshd)"          = "2.2.15.1"
+    "Event Log: Security"            = "6.1.1"
+    "Event Log: System"              = "6.1.2"
+    "Event Log: Application"         = "6.1.3"
+    "Recent Failed Logons"           = "6.2.3"
+    "Installed Applications"         = "2.3.11.1"   # unofficial
+}
 
 # ============================================================
 # HELPER FUNCTIONS
@@ -1064,77 +1129,75 @@ $jsonPath = Join-Path $scriptDir "windows_security_report.json"
 } | ConvertTo-Json -Depth 5 | Out-File -FilePath $jsonPath -Encoding UTF8
 Write-Color "  [OK] JSON: $jsonPath" -Color Green
 
-# --- HTML ---
+# --- HTML (jasny styl wzorowany na macOS, z kolumną CIS ID) ---
 $htmlPath    = Join-Path $scriptDir "windows_security_report.html"
-$riskClass   = if ($score -ge 80) { "low" } elseif ($score -ge 50) { "med" } else { "high" }
-$genDate     = Get-Date -Format "yyyy-MM-dd HH:mm"
+$riskClass   = if ($score -ge 80) { "risk-low" } elseif ($score -ge 50) { "risk-medium" } else { "risk-high" }
+$genDate     = Get-Date -Format "ddd. dd MMM yyyy HH:mm:ss K"
 
+# Przygotowanie wierszy tabeli z CIS ID
 $rows = $reportData | ForEach-Object {
-    $rowBg = switch ($_.status) {
-        'OK'   { '#1a3326' }; 'WARN' { '#332d00' }; 'FAIL' { '#331a1a' }; default { '#1e1e1e' }
+    $statusClass = switch ($_.status) {
+        'OK'   { 'ok' }
+        'WARN' { 'warn' }
+        'FAIL' { 'fail' }
+        default { 'info' }
     }
-    $badge = switch ($_.status) {
-        'OK'   { '<span class="ok">OK</span>'     }
-        'WARN' { '<span class="warn">WARN</span>' }
-        'FAIL' { '<span class="fail">FAIL</span>' }
-        default{ '<span class="info">INFO</span>' }
-    }
-    "<tr style='background:$rowBg'><td>$($_.label)</td><td>$badge</td><td>$($_.detail)</td></tr>"
+    # Pobierz CIS ID z mapowania (jeśli istnieje)
+    $cisId = if ($CIS_MAP.ContainsKey($_.label)) { $CIS_MAP[$_.label] } else { "" }
+    "<tr><td>$($_.label)</td><td class='$statusClass'>$($_.status)</td><td>$($_.detail)</td><td>$cisId</td></tr>"
 }
 $rowsHtml = $rows -join "`n"
 
-@"
+# Szablon HTML – z dodatkową kolumną CIS ID
+$htmlContent = @"
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Windows Security Report</title>
 <style>
-  *     { box-sizing:border-box; margin:0; padding:0; }
-  body  { font-family:Consolas,'Courier New',monospace; background:#0d0d0d; color:#e0e0e0; padding:2rem; }
-  h1    { color:#81d4fa; border-bottom:1px solid #333; padding-bottom:.5rem; margin-bottom:.5rem; }
-  h2    { color:#ffeb3b; margin:1.5rem 0 .4rem; }
-  p     { color:#aaa; font-size:.9rem; margin-bottom:.5rem; }
-  table { border-collapse:collapse; width:100%; margin-top:.5rem; }
-  th    { background:#1a1a1a; color:#81d4fa; padding:.5rem 1rem; text-align:left; border-bottom:2px solid #333; }
-  td    { padding:.35rem 1rem; border-bottom:1px solid #222; font-size:.88rem; vertical-align:top; }
-  .score-box { display:inline-block; margin:.5rem 0 1rem; }
-  .score     { font-size:3rem; font-weight:bold; line-height:1; }
-  .low       { color:#4caf50; }
-  .med       { color:#ffeb3b; }
-  .high      { color:#f44336; }
-  .ok        { color:#4caf50; font-weight:bold; }
-  .warn      { color:#ffeb3b; font-weight:bold; }
-  .fail      { color:#f44336; font-weight:bold; }
-  .info      { color:#9e9e9e; font-weight:bold; }
-  .pills     { display:flex; gap:1.5rem; margin:.5rem 0 1rem; flex-wrap:wrap; }
-  .pill      { padding:.3rem .8rem; border-radius:4px; font-weight:bold; font-size:.9rem; }
-  .p-ok      { background:#1a3326; color:#4caf50; }
-  .p-warn    { background:#332d00; color:#ffeb3b; }
-  .p-fail    { background:#331a1a; color:#f44336; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background: #fff; color: #222; }
+  h1 { color: #1d1d1f; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th { background: #f5f5f7; text-align: left; padding: 8px 12px; border: 1px solid #d2d2d7; }
+  td { padding: 6px 12px; border: 1px solid #d2d2d7; }
+  .ok { color: #007D3A; font-weight: bold; }
+  .warn { color: #FF9500; font-weight: bold; }
+  .fail { color: #FF3B30; font-weight: bold; }
+  .info { color: #8e8e93; }
+  .score { font-size: 24px; font-weight: bold; }
+  .risk-low { color: #007D3A; }
+  .risk-medium { color: #FF9500; }
+  .risk-high { color: #FF3B30; }
+  .summary { margin: 10px 0; }
+  .summary span { margin-right: 20px; }
+  .badge-pass { color: #007D3A; font-weight: bold; }
+  .badge-warn { color: #FF9500; font-weight: bold; }
+  .badge-fail { color: #FF3B30; font-weight: bold; }
 </style>
 </head>
 <body>
 <h1>Windows Security / Audit Report</h1>
-<p>$AUTHOR &nbsp;|&nbsp; $VERSION &nbsp;|&nbsp; $genDate</p>
-<h2>Security Score</h2>
-<div class="score-box">
-  <div class="score $riskClass">$score<span style="font-size:1.5rem">/100</span></div>
-  <div style="color:#aaa;font-size:.9rem;margin-top:.2rem">Risk Level: <span class="$riskClass">$risk</span></div>
+<p><em>Generated: $genDate</em></p>
+<div class="summary">
+  Score: <span class="score">$score/100</span> (<span class="$riskClass">$risk</span>)
 </div>
-<div class="pills">
-  <span class="pill p-ok">Passed: $($script:PASS_COUNT)</span>
-  <span class="pill p-warn">Warnings: $($script:WARN_COUNT)</span>
-  <span class="pill p-fail">Failures: $($script:FAIL_COUNT)</span>
-</div>
-<h2>Detailed Results</h2>
+<p>
+  <span class="badge-pass">[PASS] Passed: $($script:PASS_COUNT)</span>
+  <span class="badge-warn">[WARN] Warnings: $($script:WARN_COUNT)</span>
+  <span class="badge-fail">[FAIL] Failures: $($script:FAIL_COUNT)</span>
+</p>
 <table>
-<tr><th style="width:38%">Check</th><th style="width:8%">Status</th><th>Detail</th></tr>
+  <tr><th>Check</th><th>Status</th><th>Details</th><th>CIS ID</th></tr>
 $rowsHtml
 </table>
 </body>
 </html>
-"@ | Out-File -FilePath $htmlPath -Encoding UTF8
+"@
+
+# Zapis pliku bez BOM (czysty UTF-8)
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($htmlPath, $htmlContent, $utf8NoBom)
 Write-Color "  [OK] HTML: $htmlPath" -Color Green
 
 # ============================================================
