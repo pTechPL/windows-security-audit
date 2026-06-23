@@ -39,17 +39,18 @@ Results are displayed in the terminal with colour-coded statuses and automatical
 
 ## Usage
 
-### Step 1 — Download the script
+### Step 1 — Download the script.
 
-Save the script as `audit.ps1` in a convenient folder (e.g. `C:\Scripts\`).
+Save the script as `auditWIN.ps1` in a convenient folder (e.g. `C:\Scripts\`).
 
-### Step 2 — Run the audit
+### Step 2 — Run the audit.
 
 Open **PowerShell as Administrator** and navigate to the script folder:
 
-```powershell
-cd C:\Scripts
-powershell -ExecutionPolicy Bypass -File .\audit.ps1
+```cd C:\Scripts```
+
+```powershell -ExecutionPolicy Bypass -File .\auditWIN.ps1```
+
 The script will:
 
 detect if you're running as Administrator (and warn if not)
@@ -60,24 +61,28 @@ print colour-coded results to the terminal
 
 display a Security Score (0–100) and Risk Level (Low/Medium/High)
 
-offer interactive auto-fix for detected issues
+offer interactive auto-fix for detected issues.
 
-Step 3 — Auto-fix options
+### Step 3 — Auto-fix options
+
 After the audit, you'll be prompted with auto-fix options:
 
 Option	Description
-t / y	Apply the fix for this specific issue
+y	Apply the fix for this specific issue
 n	Skip this fix
 a	Apply all remaining fixes automatically
 q	Quit auto-fix and skip all remaining
-Step 4 — Review reports
+
+### Step 4 — Review reports
+
 Two files are generated in the script folder:
 
 windows_security_report.json — structured data format
 
 windows_security_report.html — human-readable report with styling
 
-What Gets Checked
+## What Gets Checked
+
 Category	Checks
 System Security	Windows Defender (AV, Real-Time, Tamper Protection), Firewall profiles, Windows Update service, Secure Boot, BitLocker (with TPM/no-TPM support), UAC, ASLR/DEP, Credential Guard, AppLocker
 Privacy & Telemetry	Telemetry level, Advertising ID, Activity History, Cortana, Location tracking, Feedback frequency
@@ -89,12 +94,12 @@ Startup & Scheduled Tasks	Registry Run/RunOnce keys, Startup folder, non-Microso
 SSH Hardening	OpenSSH Server status, PermitRootLogin, PasswordAuthentication, MaxAuthTries, LoginGraceTime, AllowUsers
 Installed Software	Full list of installed applications, flags known risky software (TeamViewer, AnyDesk, VNC, Adobe Flash, old Java versions)
 Event Log Health	Security, System, Application logs (enabled and size), recent failed logon events
-Output Example
-text
-========================================
+Output Example:
+
+```========================================
 Windows Security / Audit Report
 Author: Bartlomiej Pogwizd / youtube.com/@pTech-pl
-Version: 2.0
+Version: 1.0
 ========================================
 
 1. System Security
@@ -130,7 +135,7 @@ score = (passed × 100 + warnings × 50) / total_checks
 Score	Risk Level
 80–100	🟢 Low
 50–79	🟡 Medium
-0–49	🔴 High
+0–49	🔴 High```
 Notes
 The audit is read-only — it never modifies any system settings unless you explicitly approve an auto-fix
 
@@ -182,48 +187,5 @@ MIT — feel free to use, modify, and share.
 Contributing
 Pull requests and issues are welcome. If a check produces incorrect results on your Windows version, please open an issue with:
 
-Windows version (winver)
-
-PowerShell version ($PSVersionTable.PSVersion)
-
-Output of the failing check (or relevant section)
-
-Version v2.0
-
-Added: Exploit Protection (ASLR/DEP) checks
-
-Added: Credential Guard detection
-
-Added: AppLocker/WDAC detection
-
-Added: DNS over HTTPS (DoH) check
-
-Added: Account lockout threshold check
-
-Added: Empty password account detection and fix
-
-Added: Recent failed logon events
-
-Added: Risky software detection
-
-Added: Print Spooler security warning (PrintNightmare)
-
-Added: SMB1 protocol detection and fix
-
-Added: Event log health checks
-
-Added: Interactive auto-fix with t/n/a/q options
-
-Improved: HTML report styling and readability
-
-Fixed: Auto-fix error handling
-
-Core system security checks
-
-Basic privacy and telemetry checks
-
-User and privilege audits
-
-Network port scanning
 
 JSON/HTML report generation<img width="2480" height="1200" alt="Zrzut ekranu 2026-06-23 094154" src="https://github.com/user-attachments/assets/97312b0d-a35f-451f-b58e-0c1c380cecd4" />
